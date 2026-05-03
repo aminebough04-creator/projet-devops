@@ -1,16 +1,34 @@
 pipeline {
     agent any
 
+    environment {
+        // Nom de votre image Docker
+        DOCKER_IMAGE = "amine-devops-app"
+    }
+
     stages {
-        stage('Connexion') {
+        stage('Checkout') {
             steps {
-                echo 'Connexion GitHub App OK !'
+                // Récupère le code depuis la branche main
+                checkout scm
             }
         }
-        stage('Check Fichiers') {
+
+        stage('Build Docker Image') {
             steps {
-                sh 'ls -la'
-                echo 'Les fichiers PHP sont bien présents.'
+                script {
+                    echo "Construction de l'image Docker..."
+                    // On utilise le numéro de build Jenkins (#4, #5...) comme tag
+                    sh "docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} ."
+                    sh "docker build -t ${DOCKER_IMAGE}:latest ."
+                }
+            }
+        }
+
+        stage('Vérification') {
+            steps {
+                echo "Liste des images créées :"
+                sh "docker images | grep ${DOCKER_IMAGE}"
             }
         }
     }
