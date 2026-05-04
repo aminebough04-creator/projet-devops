@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: amine-app-service
+spec:
+  type: LoadBalancer # Indispensable sur Docker Desktop pour avoir une IP locale
+  selector:
+    app: amine-devops
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposé vers l'extérieur
+      targetPort: 80 # Port à l'intérieur du conteneur
