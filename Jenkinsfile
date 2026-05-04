@@ -1,51 +1,18 @@
-pipeline {
-    agent any
-
-    tools {
-        dockerTool 'dockerdev'
-    }
-
-    environment {
-        DOCKER_HUB_USER = 'aminebg10'
-        APP_NAME = 'amine-devops-app'
-        // On récupère les identifiants Docker Hub de manière sécurisée
-        DOCKER_CREDS = credentials('docker-hub-amine')
-    }
-
-    stages {
-        stage('Build & Push to Docker Hub') {
+stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    def dockerHome = tool name: 'dockerdev', type: 'dockerTool'
-                    def dockerBin = "${dockerHome}/bin/docker"
-                    
-                    // Connexion, Build et Push via commandes SH directes
+                    // On télécharge kubectl dans le répertoire courant pour ce build
                     sh """
-                        # Connexion
-                        echo \$DOCKER_CREDS_PSW | ${dockerBin} login -u \$DOCKER_CREDS_USR --password-stdin
+                        curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                        chmod +x kubectl
                         
-                        # Build
-                        ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
-                        ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
+                        # Mise à jour du fichier YAML
+                        sed -i 's|image:.*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|' deployment.yaml
                         
-                        # Push
-                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
-                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
-                        
-                        # Déconnexion par sécurité
-                        ${dockerBin} logout
+                        # Utilisation du kubectl local (./kubectl)
+                        ./kubectl apply -f deployment.yaml
+                        ./kubectl apply -f service.yaml
                     """
                 }
             }
         }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                // Utilise l'image spécifique buildée juste avant
-                sh "sed -i 's|image:.*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|' deployment.yaml"
-                sh "kubectl apply -f deployment.yaml"
-                sh "kubectl apply -f service.yaml"
-            }
-        }
-    }
-}
