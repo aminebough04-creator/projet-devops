@@ -10,3 +10,10 @@ stage('Push to Docker Hub') {
         }
     }
 }
+stage('Deploy to K8s') {
+    steps {
+        script {
+            kubernetesDeploy(configs: 'deployment.yaml', kubeconfigId: 'votre-config-k8s')
+        }
+    }
+}
