@@ -1,1 +1,22 @@
-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amine-app-deployment
+  labels:
+    app: amine-devops
+spec:
+  replicas: 2 # On lance 2 copies de votre app pour la haute disponibilité
+  selector:
+    matchLabels:
+      app: amine-devops
+  template:
+    metadata:
+      labels:
+        app: amine-devops
+    spec:
+      containers:
+      - name: amine-container
+        # REMPLACEZ 'votre_user' par votre pseudo Docker Hub
+        image: votre_user/amine-devops-app:7 
+        ports:
+        - containerPort: 80
