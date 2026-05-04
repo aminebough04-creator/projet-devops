@@ -1,16 +1,11 @@
-pipeline {
-    agent any
-    tools {
-        // Cela doit correspondre exactement au nom dans l'image image_d4d3e0.png
-        dockerTool 'dockerdev' 
-    }
-    stages {
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    // Utilisation de la syntaxe native du plugin
-                    docker.build("amine-devops-app:${env.BUILD_NUMBER}")
-                }
+stage('Push to Docker Hub') {
+    steps {
+        script {
+            // "docker-hub-amine" doit correspondre à l'ID choisi à l'étape 2
+            docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-amine') {
+                // Remplacez 'votre_user' par votre vrai pseudo Docker Hub
+                def myImage = docker.build("votre_user/amine-devops-app:${env.BUILD_NUMBER}")
+                myImage.push()
             }
         }
     }
