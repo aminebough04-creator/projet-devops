@@ -2,42 +2,47 @@ pipeline {
     agent any
 
     tools {
-        // Cela télécharge/configure l'outil dockerdev sur le noeud
-        dockerTool 'dockerdev' 
+        dockerTool 'dockerdev'
     }
 
     environment {
         DOCKER_HUB_USER = 'aminebg10'
         APP_NAME = 'amine-devops-app'
+        // On récupère les identifiants Docker Hub de manière sécurisée
+        DOCKER_CREDS = credentials('docker-hub-amine')
     }
 
     stages {
         stage('Build & Push to Docker Hub') {
             steps {
                 script {
-                    // 1. Récupérer le dossier d'installation de l'outil
                     def dockerHome = tool name: 'dockerdev', type: 'dockerTool'
-                    
-                    // 2. Définir le chemin du binaire (sous Linux/Jenkins Docker, c'est souvent dans /bin)
                     def dockerBin = "${dockerHome}/bin/docker"
                     
-                    // 3. Utiliser withEnv pour s'assurer que le plugin Docker trouve le binaire
-                    withEnv(["PATH+DOCKER=${dockerHome}/bin"]) {
-                        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-amine') {
-                            // On construit l'image
-                            def customImage = docker.build("${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}")
-                            // On la pousse
-                            customImage.push()
-                            customImage.push("latest")
-                        }
-                    }
+                    // Connexion, Build et Push via commandes SH directes
+                    sh """
+                        # Connexion
+                        echo \$DOCKER_CREDS_PSW | ${dockerBin} login -u \$DOCKER_CREDS_USR --password-stdin
+                        
+                        # Build
+                        ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
+                        ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
+                        
+                        # Push
+                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
+                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
+                        
+                        # Déconnexion par sécurité
+                        ${dockerBin} logout
+                    """
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                // S'assure que kubectl est disponible pour appliquer vos fichiers YAML
+                // Utilise l'image spécifique buildée juste avant
+                sh "sed -i 's|image:.*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|' deployment.yaml"
                 sh "kubectl apply -f deployment.yaml"
                 sh "kubectl apply -f service.yaml"
             }
