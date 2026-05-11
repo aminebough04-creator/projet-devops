@@ -15,8 +15,8 @@ spec:
         app: amine-devops
     spec:
       containers:
-      - name: amine-container
+      - name: amine-app
         # REMPLACEZ 'votre_user' par votre pseudo Docker Hub
-        image: votre_user/amine-devops-app:7 
+        image: aminebg10/amine-devops-app:latest
         ports:
         - containerPort: 80
