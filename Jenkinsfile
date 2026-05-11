@@ -1,31 +1,24 @@
 pipeline {
     agent any
 
-    tools {
-        dockerTool 'dockerdev'
-    }
-
     environment {
         DOCKER_HUB_USER = 'aminebg10'
         APP_NAME = 'amine-devops-app'
-        DOCKER_CREDS = credentials('docker-hub-amine')
     }
 
     stages {
-        stage('Build & Push to Docker Hub') {
+        stage('Push to Docker Hub') {
             steps {
                 script {
-                    def dockerHome = tool name: 'dockerdev', type: 'dockerTool'
-                    def dockerBin = "${dockerHome}/bin/docker"
-                    
-                    sh """
-                        echo \$DOCKER_CREDS_PSW | ${dockerBin} login -u \$DOCKER_CREDS_USR --password-stdin
-                        ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
-                        ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
-                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
-                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
-                        ${dockerBin} logout
-                    """
+                    // Utilise le plugin Docker Pipeline avec vos identifiants Jenkins
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-amine') {
+                        // Construction de l'image avec le numéro de build dynamique
+                        def myImage = docker.build("${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}")
+                        
+                        // Push de la version spécifique et de la version 'latest'
+                        myImage.push()
+                        myImage.push("latest")
+                    }
                 }
             }
         }
@@ -33,17 +26,12 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh """
-                        curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                        chmod +x kubectl
-                        
-                        # Mise à jour de l'image dans le fichier YAML
-                        sed -i 's|image:.*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|' deployment.yaml
-                        
-                        # AJOUT DU FLAG --validate=false POUR ÉVITER L'ERREUR D'AUTHENTIFICATION
-                        ./kubectl apply -f deployment.yaml --validate=false
-                        ./kubectl apply -f service.yaml --validate=false
-                    """
+                    // Utilise le plugin Kubernetes Continuous Deploy
+                    // L'ID 'k8s-config-file' doit correspondre au "Secret file" créé dans Jenkins
+                    kubernetesDeploy(
+                        configs: 'deployment.yaml',
+                        kubeconfigId: 'k8s-config-file'
+                    )
                 }
             }
         }
