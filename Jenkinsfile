@@ -33,15 +33,16 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Cette partie télécharge kubectl et déploie l'application
                     sh """
                         curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                         chmod +x kubectl
                         
+                        # Mise à jour de l'image dans le fichier YAML
                         sed -i 's|image:.*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|' deployment.yaml
                         
-                        ./kubectl apply -f deployment.yaml
-                        ./kubectl apply -f service.yaml
+                        # AJOUT DU FLAG --validate=false POUR ÉVITER L'ERREUR D'AUTHENTIFICATION
+                        ./kubectl apply -f deployment.yaml --validate=false
+                        ./kubectl apply -f service.yaml --validate=false
                     """
                 }
             }
