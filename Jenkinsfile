@@ -8,28 +8,32 @@ pipeline {
     environment {
         DOCKER_HUB_USER = 'aminebg10'
         APP_NAME = 'amine-devops-app'
+        DOCKER_CREDS = credentials('docker-hub-amine')
     }
 
     stages {
-        stage('Push to Docker Hub') {
+        stage('Build & Push to Docker Hub') {
             steps {
                 script {
-                    // Récupération du chemin de l'outil
+                    // On localise précisément où Jenkins a installé Docker
                     def dockerHome = tool name: 'dockerdev', type: 'org.jenkinsci.plugins.docker.commons.tools.DockerTool'
+                    def dockerBin = "${dockerHome}/bin/docker"
                     
-                    // Ajout au PATH et utilisation du bloc natif pour la connexion
-                    withEnv(["PATH+DOCKER=${dockerHome}/bin"]) {
-                        // Ce bloc gère le 'docker login' et 'docker logout' automatiquement
-                        docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-amine') {
-                            
-                            // Build de l'image
-                            def myImage = docker.build("${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}")
-                            
-                            // Push des tags
-                            myImage.push()
-                            myImage.push("latest")
-                        }
-                    }
+                    sh """
+                        # 1. Connexion (On utilise le chemin complet vers le binaire)
+                        echo \$DOCKER_CREDS_PSW | ${dockerBin} login -u \$DOCKER_CREDS_USR --password-stdin
+                        
+                        # 2. Build
+                        ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
+                        
+                        # 3. Tags et Push
+                        ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
+                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
+                        ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
+                        
+                        # 4. Logout
+                        ${dockerBin} logout
+                    """
                 }
             }
         }
