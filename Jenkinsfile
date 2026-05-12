@@ -15,23 +15,23 @@ pipeline {
         stage('Build & Push to Docker Hub') {
             steps {
                 script {
-                    // On localise précisément où Jenkins a installé Docker
+                    // Localisation du binaire Docker
                     def dockerHome = tool name: 'dockerdev', type: 'org.jenkinsci.plugins.docker.commons.tools.DockerTool'
                     def dockerBin = "${dockerHome}/bin/docker"
                     
                     sh """
-                        # 1. Connexion (On utilise le chemin complet vers le binaire)
-                        echo \$DOCKER_CREDS_PSW | ${dockerBin} login -u \$DOCKER_CREDS_USR --password-stdin
+                        # Connexion compatible avec les anciennes versions
+                        ${dockerBin} login -u \$DOCKER_CREDS_USR -p \$DOCKER_CREDS_PSW
                         
-                        # 2. Build
+                        # Build de l'image
                         ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
                         
-                        # 3. Tags et Push
+                        # Tags et Push
                         ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
                         ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
                         ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
                         
-                        # 4. Logout
+                        # Déconnexion
                         ${dockerBin} logout
                     """
                 }
@@ -40,6 +40,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
+                // Déploiement avec le nom de conteneur amine-app
                 kubernetesDeploy(
                     configs: 'deployment.yaml',
                     kubeconfigId: 'k8s-config-file'
