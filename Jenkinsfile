@@ -9,8 +9,6 @@ pipeline {
         DOCKER_HUB_USER = 'aminebg10'
         APP_NAME = 'amine-devops-app'
         DOCKER_CREDS = credentials('docker-hub-amine')
-        // Force le client à utiliser une version d'API compatible avec Docker Desktop
-        DOCKER_API_VERSION = '1.40'
     }
 
     stages {
@@ -21,18 +19,11 @@ pipeline {
                     def dockerBin = "${dockerHome}/bin/docker"
                     
                     sh """
-                        # Connexion
                         ${dockerBin} login -u \$DOCKER_CREDS_USR -p \$DOCKER_CREDS_PSW
-                        
-                        # Build avec l'image
                         ${dockerBin} build -t ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} .
-                        
-                        # Tags et Push
                         ${dockerBin} tag ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER} ${DOCKER_HUB_USER}/${APP_NAME}:latest
                         ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}
                         ${dockerBin} push ${DOCKER_HUB_USER}/${APP_NAME}:latest
-                        
-                        # Logout
                         ${dockerBin} logout
                     """
                 }
@@ -41,10 +32,19 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                kubernetesDeploy(
-                    configs: 'deployment.yaml',
-                    kubeconfigId: 'k8s-config-file'
-                )
+                // On utilise withKubeConfig qui est disponible sur votre Jenkins
+                withKubeConfig([credentialsId: 'k8s-config-file']) {
+                    sh """
+                        # On met à jour l'image dans le fichier YAML avant d'appliquer
+                        sed -i 's|image: .*|image: ${DOCKER_HUB_USER}/${APP_NAME}:${env.BUILD_NUMBER}|g' deployment.yaml
+                        
+                        # Déploiement standard
+                        kubectl apply -f deployment.yaml
+                        
+                        # Vérification du statut
+                        kubectl rollout status deployment/amine-app
+                    """
+                }
             }
         }
     }
