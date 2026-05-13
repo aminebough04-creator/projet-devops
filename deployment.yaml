@@ -1,21 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: amine-app-deployment
-  labels:
-    app: amine-devops
+  name: php-app-deployment
 spec:
-  replicas: 2 # Haute disponibilité avec 2 instances
+  replicas: 2 # Lance deux copies de votre app pour la sécurité
   selector:
     matchLabels:
-      app: amine-devops
+      app: php-web
   template:
     metadata:
       labels:
-        app: amine-devops
+        app: php-web
     spec:
       containers:
-      - name: amine-app # Nom validé via kubectl
-        image: aminebg10/amine-devops-app:latest
+      - name: php-container
+        image: votre_pseudo/projet-devops-php:latest # Votre image Docker Hub
         ports:
         - containerPort: 80
