@@ -5,7 +5,7 @@ metadata:
   labels:
     app: amine-devops
 spec:
-  replicas: 2 # On lance 2 copies de votre app pour la haute disponibilité
+  replicas: 2 # Haute disponibilité avec 2 instances
   selector:
     matchLabels:
       app: amine-devops
@@ -15,8 +15,7 @@ spec:
         app: amine-devops
     spec:
       containers:
-      - name: amine-app
-        # REMPLACEZ 'votre_user' par votre pseudo Docker Hub
+      - name: amine-app # Nom validé via kubectl
         image: aminebg10/amine-devops-app:latest
         ports:
         - containerPort: 80
