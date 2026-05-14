@@ -2,6 +2,7 @@ pipeline {
     agent any
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        EC2_IP = '3.90.232.3'
     }
     stages {
         stage('Checkout') {
@@ -18,10 +19,49 @@ pipeline {
                 sh 'docker push aminebg10/projet-devops-php:latest'
             }
         }
-        stage('Deploy K8s') {
+        stage('Deploy to EC2') {
             steps {
-                sh 'kubectl apply -f deployment.yaml'
-                sh 'kubectl apply -f service.yaml'
+                sshagent(['ec2-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ubuntu@3.90.232.3 "
+                            kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-app-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: php-web
+  template:
+    metadata:
+      labels:
+        app: php-web
+    spec:
+      containers:
+      - name: php-container
+        image: aminebg10/projet-devops-php:latest
+        ports:
+        - containerPort: 80
+EOF
+                            kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-app-service
+spec:
+  type: NodePort
+  selector:
+    app: php-web
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+EOF
+                        "
+                    '''
+                }
             }
         }
     }
