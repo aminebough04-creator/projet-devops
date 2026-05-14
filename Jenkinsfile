@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+    }
     stages {
         stage('Checkout') {
             steps { checkout scm }
@@ -11,7 +14,7 @@ pipeline {
         }
         stage('Push to Hub') {
             steps {
-                // On configurera les secrets plus tard dans Jenkins
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
                 sh 'docker push aminebg10/projet-devops-php:latest'
             }
         }
