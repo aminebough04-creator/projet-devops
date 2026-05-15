@@ -285,3 +285,5 @@ Développé avec PHP 7.4+, MySQL, Bootstrap 5.
 
 **Version** : 1.0  
 **Dernière mise à jour** : 2025-12-03
+#   A u t o - d e p l o y   t e s t  
+ 
