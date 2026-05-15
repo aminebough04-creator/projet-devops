@@ -2,9 +2,6 @@
 uploads/*
 !uploads/.gitkeep
 
-# Ignorer les fichiers de config contenant des mots de passe (à adapter)
-config/db.php
-
 # Fichiers système
 Thumbs.db
 .DS_Store 
