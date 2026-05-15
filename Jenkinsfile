@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        EC2_IP = '3.90.232.3'
+        EC2_IP = '54.236.21.213'
     }
     stages {
         stage('Checkout') {
@@ -23,7 +23,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh-key']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.90.232.3 "
+                        ssh -o StrictHostKeyChecking=no ubuntu@54.236.21.213 "
                             kubectl apply -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
