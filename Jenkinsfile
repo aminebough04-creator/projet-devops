@@ -42,6 +42,7 @@ spec:
       containers:
       - name: php-container
         image: aminebg10/projet-devops-php:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 EOF
@@ -59,6 +60,7 @@ spec:
       targetPort: 80
       nodePort: 30080
 EOF
+                            kubectl rollout restart deployment php-app-deployment
                         "
                     '''
                 }
